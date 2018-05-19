@@ -20,18 +20,25 @@ import time
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
+import shutil
 
+# ==================== Logger Declaration ====================
+
+# Define the script root folder used for modules internal referencing
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
+# Define the log directory
 LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     time.sleep(1)
 
+# Define the logging modules
 logFormatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+# Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/02_Company_News_Scraping_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
 LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/02_Company_News_Scraping_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
@@ -39,41 +46,68 @@ fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
 logger.addHandler(fileHandler)
 
+# Define the handler for stdout logger
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(logFormatter)
 consoleHandler.setLevel(logging.INFO)
 logger.addHandler(consoleHandler)
 
-
+# Define the handler for stdout logger
 LINFO    = lambda s: logger.info(s)
 LDEBUG   = lambda s: logger.debug(s)
 LERROR   = lambda s: logger.error(s)
 LWARNING = lambda s: logger.warning(s)
 
 
-# Global Variable Declaration
+# ==================== Global Variable Declaration ====================
+
+# 1. Variables
 LINKS = []
-RESULT_PATH = join(SCRIPT_ROOT_FOLDER, "result/02_news")
-if not exists(RESULT_PATH):
-    LINFO("'{0}' directory not exist. Creating folder '{0}'".format(RESULT_PATH))
-    os.makedirs(RESULT_PATH)
+TITLE_YEARS_PATTERN = re.compile(r'-?(?P<year>201[7|8])/[0-9]{1,2}/[0-9]{1,2}')
+NEWS_YEAR = ['2017', '2018']        # News years to be included. Add '2016' to include 2016 news
+
+# 2. Paths and Files declaration
+NEWS_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, "result/02_news")
+REQUIRED_JSON_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_news_links.json')
+
+# 2.1 Paths and Files existence check
+LINFO("Checking if '{}'' already existed".format(NEWS_RESULT_DIR))
+if exists(NEWS_RESULT_DIR):
+    LINFO("Deleting previous directory")
+    shutil.rmtree(NEWS_RESULT_DIR)
+
+if not exists(NEWS_RESULT_DIR):
+    LINFO("'{0}' directory not exist. Creating folder '{0}'".format(NEWS_RESULT_DIR))
+    os.makedirs(NEWS_RESULT_DIR)
     time.sleep(1)
 
-JSON_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_news_links.json')
-if not exists(JSON_FILE):
-    LERROR("'{}' does not exist".format(JSON_FILE))
+if not exists(REQUIRED_JSON_FILE):
+    LERROR("'{}' does not exist".format(REQUIRED_JSON_FILE))
     LERROR("Please run 'release/00_Get_Links.py' to generate links")
     quit()
     
-YEARS_TO_SEARCH = re.compile(r'-?(?P<year>201[7|8])/[0-9]{1,2}/[0-9]{1,2}')
-NEWS_YEAR = ['2017', '2018']
-
-with open(JSON_FILE) as json_file:
+with open(REQUIRED_JSON_FILE) as json_file:
     LINKS = json.load(json_file)
 
-# Algo start
+
+# ==================== Supporting method declaration ====================
+
+def write_to_json(path, data):
+    assert type(data) is dict, "data has to be a 'dict' data type"
+
+    LINFO("Writing into JSON file...")
+    with io.open(path, 'w', encoding='utf8') as fp:
+        json_data = json.dumps(data, fp, ensure_ascii=False, indent=4)
+        fp.write(unicode(json_data))
+    LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
+
+
+# ==================== Main Process ====================
+
 _iteration = 0
 start_time = time.time()
+
+# Iterate through every link
 for k, link in LINKS.iteritems():
     index = 0
     news_dict = {}    # contains all news about a company
@@ -83,10 +117,10 @@ for k, link in LINKS.iteritems():
     page = requests.get(link)
     LINFO("Page returns <{}> code".format(page.status_code))
 
-    next_page = []
-    JSON_FILENAME = "{:0>2}_news.json".format(k)
-    number_of_news_found = 0
-    NEWS_YEARS_NOT_FOUND = False
+    next_page = []                                  # Flag for a page having a next page
+    JSON_FILENAME = "{:0>2}_news.json".format(k)    # Exported JSON name
+    number_of_news_found = 0                        # Tracker for number of news found
+    NEWS_YEARS_NOT_FOUND = False                    # Flag for particular news years
 
     if page.status_code == 200:
         LINFO("HTML GET returns [{}] status code. Starting initial soup..".format(page.status_code))
@@ -105,44 +139,46 @@ for k, link in LINKS.iteritems():
             news_title = [news.get_text(separator='<br>', strip=True) for news in news_title]
             LINFO("Finished locating news titles...")
             
-
             # 4. Find the news content with `class`: `Sharon_add_news_content`
             LINFO("Locating news content...")
             news_contents = soup.find_all('td', {'class':'Sharon_add_news_content'})
             news_contents = [content.get_text(separator='<br>', strip=True) for content in news_contents]
             LINFO("Finished locating news contents!")
 
-
-            # Populating the news dictionary as <news_index> : <{<title>: <content>}>
+            # Every page only have 20 news to show
+            # Populating the news dictionary as <title> : <content>
+            # Iterating to every news_title and news_content
             for t, c in zip(news_title, news_contents):
-                YEARS_FOUND = re.search(YEARS_TO_SEARCH, unicode(t).encode('utf8'))
+                # Filter if news title matched TITLE_YEARS_PATTERN
+                YEARS_FOUND = re.search(TITLE_YEARS_PATTERN, unicode(t).encode('utf8'))
                 if YEARS_FOUND:
+                    # Validate if the year is within NEWS_YEAR
                     if YEARS_FOUND.group('year') in NEWS_YEAR:
-                        # news_dict[index] = {unicode(t): unicode(c)}
                         news_dict[unicode(t)] = unicode(c)
                         number_of_news_found += 1
                         index += 1
                 else:
+                    # Flag as no more news is within specified NEWS_YEAR to quit loop
                     NEWS_YEARS_NOT_FOUND = True
                     if NEWS_YEARS_NOT_FOUND:
                         LINFO("Cannot find {} news anymore".format(" and ".join(NEWS_YEAR)))
                         LINFO("Cooling up the soup..")
                         break
-                # news_dict[index] = {unicode(t): unicode(c)}
-                # index += 1
-            
+            # Finished processing 20 news on the page.
 
-            # Check for next page, reiterate if found
+            # Check for next page, reiterate if found a 'Next Page' link
             if not NEWS_YEARS_NOT_FOUND:  # If still have 2017 or 2018 news --> check for next page
                 LINFO("Checking for next pages...")
+                # Next page is defined with a 下一頁 button
                 next_page = [a for a in soup.find_all('a') if a.get_text() == u'下一頁']  # return [] if not available
-                if next_page: # if current page has next page
+                if next_page: # If current page has next page
                     _second = 0.5
-                    LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
-                    time.sleep(_second)
-                    LINFO("Waking up.. Souping next news page..\n")
+                    if _second:
+                        LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
+                        time.sleep(_second)
+                        LINFO("Waking up.. Souping next news page..\n")
 
-                    next_page = next_page[0]['href'].split('&')[-1] # splitted &Page=n
+                    next_page = next_page[0]['href'].split('&')[-1] # Extract 'Page=n'
                     LINFO("Next {} found..".format(next_page))
                     next_page_link = "&".join([link, next_page]) # join &Page=n to the original link
                     LINFO("Requesting URL GET at {}".format(next_page_link))
@@ -157,19 +193,22 @@ for k, link in LINKS.iteritems():
                     LINFO("No next page found! End of the news section")
 
                     # Write into a .json file
-                    LINFO("Writing into JSON file...")
-                    with io.open(join(RESULT_PATH, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                        data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
-                        fp.write(unicode(data))
-                    LINFO("Finished writing JSON file to: {}\n".format(join(RESULT_PATH, JSON_FILENAME).encode('utf8')))
+                    write_to_json(join(NEWS_RESULT_DIR, JSON_FILENAME), news_dict)
+                    # LINFO("Writing into JSON file...")
+                    # with io.open(join(NEWS_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
+                    #     data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
+                    #     fp.write(unicode(data))
+                    # LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
                     break
             else: # If no 2017 or 2018 news anymore --> Write to JSON file and terminate the loop. Continue to next company
                 LINFO("Terminating due to no {} news found anymore".format(" and ".join(NEWS_YEAR)))
-                LINFO("Writing into JSON file...")
-                with io.open(join(RESULT_PATH, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                    data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
-                    fp.write(unicode(data))
-                LINFO("Finished writing JSON file to: {}\n".format(join(RESULT_PATH, JSON_FILENAME).encode('utf8')))
+                # Write into a .json file
+                write_to_json(join(NEWS_RESULT_DIR, JSON_FILENAME), news_dict)
+                # LINFO("Writing into JSON file...")
+                # with io.open(join(NEWS_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
+                #     data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
+                #     fp.write(unicode(data))
+                # LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
                 break
     else:
         LERROR("Page returns [{}] status code. Please check".format(page.status_code))

@@ -21,7 +21,7 @@ from datetime import datetime
 import os
 from os.path import join, exists
 import logging
-
+import shutil
 
 # ==================== Logger Declaration ====================
 
@@ -88,6 +88,11 @@ if not exists(COMPANY_INFO_JSON_SOURCE_FILE):
 with open(COMPANY_INFO_JSON_SOURCE_FILE) as json_file:
     LINKS = json.load(json_file)
     LINFO("Successfully loading '{}' links".format(COMPANY_INFO_JSON_SOURCE_FILE))
+
+LINFO("Checking if '{}' already existed".format(COMPANY_INFO_RESULT_DIR))
+if exists(COMPANY_INFO_RESULT_DIR):
+    LINFO("Deleting previous directory")
+    shutil.rmtree(COMPANY_INFO_RESULT_DIR)
 
 if not exists(COMPANY_INFO_RESULT_DIR):
     LWARNING("'{0}' directory not exist. Creating folder '{0}'".format(COMPANY_INFO_RESULT_DIR))
