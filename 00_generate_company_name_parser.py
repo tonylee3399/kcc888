@@ -7,61 +7,74 @@ from os.path import join, exists
 from datetime import datetime
 import logging
 
+# ==================== Logger Declaration ====================
+
+# Define the script root folder used for modules internal referencing
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
+# Define the log directory
 LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
 if not exists(LOG_DIR):
-	os.makedirs(LOG_DIR)
+    os.makedirs(LOG_DIR)
 
+# Define the logging modules
 logFormatter = logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+# Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/00_generate_company_name_parser_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
 LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/00_generate_company_name_parser_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
-logger.addHandler(fileHandler)
+logger.addHandler(fileHandler)      # Add handler to root logger
 
+# Define the handler for stdout logger
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(logFormatter)
 consoleHandler.setLevel(logging.INFO)
-logger.addHandler(consoleHandler)
+logger.addHandler(consoleHandler)   # Add handler to root logger
 
+# Define easy to read/call method for logging
 LINFO    = lambda s: logger.info(s)
 LDEBUG   = lambda s: logger.debug(s)
 LERROR   = lambda s: logger.error(s)
 LWARNING = lambda s: logger.warning(s)
 
 
+# ==================== Global Variable Declaration ====================
+
+# 1. Variables
 raw_lines = []
 
+# 2. Paths and Files Declaration
 REQUIRED_FILE = join(SCRIPT_ROOT_FOLDER, 'reference/parse_bifoo.php')
 SAVE_DIR = join(SCRIPT_ROOT_FOLDER, 'resource')
 SAVE_FILENAME = 'company_name_parser.json'
 
-
-
-# Check all required path and files
+# 2.1. Check if saving directory exists
 if not exists(SAVE_DIR):
-	LINFO("'{}' save folder does not exist.".format(SAVE_DIR))
-	os.makedirs(SAVE_DIR)
-	LINFO("'{}' save folder created".format(SAVE_DIR))
+    # Create saving directory if does not exist
+    LINFO("'{}' save folder does not exist.".format(SAVE_DIR))
+    os.makedirs(SAVE_DIR)
+    LINFO("'{}' save folder created".format(SAVE_DIR))
 
-# Reading all information within parse_bifoo.php
+# 2.2. Check if required file exists
 if exists(REQUIRED_FILE):
-	LDEBUG("File '{}' exists".format(REQUIRED_FILE))
-	with open(REQUIRED_FILE, 'r') as f:
-	    for line in f.readlines():
-	        raw_lines.append(line)
-	    LDEBUG("Finished reading all content")
-	    LDEBUG(raw_lines)
+    # If exists: read every line in parse_bifoo.php to raw_lines variable
+    LDEBUG("File '{}' exists".format(REQUIRED_FILE))
+    with open(REQUIRED_FILE, 'r') as f:
+        for line in f.readlines():
+            raw_lines.append(line)
+        LDEBUG("Finished reading all content")
+        LDEBUG(raw_lines)
 else:
-	LERROR("'{}' required file does not exists!! Please supply!".format(REQUIRED_FILE))
+    # If doesn't exist: Need to supply parse_bifoo.php to this 
+    LERROR("'{}' required file does not exists!! Please supply!".format(REQUIRED_FILE))
 
 
-# Preprocess the information
+# 3.1 Extracting Company Name in the web
 LINFO("Preprocessing information read from parse_bifoo.php")
 result_bifeng = [c.strip().split(' ')[1][1:-2] for c in raw_lines if 'case' in c]
 LINFO("Finished preprocessing information read from parse_bifoo.php")
@@ -69,7 +82,7 @@ LINFO("Finished preprocessing information read from parse_bifoo.php")
 # Company name patterns to capture within the string
 pattern = r"\$array\[\$i\]\['cmpname'\] = \'(?P<cmpname>.*)\';"
 
-# Find all respective patterns
+# 3.2 Extracting DB friendly name by finding string matching the patterns
 LINFO("Find lines matching pattern specified")
 result_db = re.findall(pattern, "\n".join(raw_lines))
 LINFO("Finished finding lines matching pattern specified")
@@ -80,11 +93,12 @@ result_bifeng = [x.decode('utf8') for x in result_bifeng]
 result_db = [x.decode('utf8') for x in result_db]
 LINFO("Finished decoding..")
 
-# Contain all information within dictionary variable
+# 3.3 Zip all information into a dictionary to prepare feeding to JSON module
 LINFO("Creating dictionary containing all information")
 dictionary = dict(zip(result_bifeng, result_db))
 LDEBUG(dictionary)
 
+# 4. Exporting the dictionary to JSON file
 with io.open(join(SAVE_DIR, SAVE_FILENAME), 'w', encoding='utf8') as f:
     data = json.dumps(dictionary, f, ensure_ascii=False, indent=4, sort_keys=True)
     f.write(unicode(data))
