@@ -203,12 +203,14 @@ def handle_values(s):
         return s
 
 
-def handle_announcement():
+def handle_announcement(db_settings, key='announcement'):
     announcement_found = 0
     total_announcement_inserted = 0
     total_duplicate_announcement = 0
-    ANNOUNCEMENT_PATH = join(SCRIPT_ROOT_FOLDER, 'result/03_announcement/')
-    TARGET_TABLE = "Announcement"
+    ANNOUNCEMENT_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    TARGET_TABLE = db_settings[key]['TARGET_TABLE']
+    LDEBUG("Announcement Save Folder: {}".format(ANNOUNCEMENT_PATH))
+    LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
 
     if not exists(ANNOUNCEMENT_PATH):
         LERROR("{} does not exist! Please run 03_Company_Announcement_Scraping.py".format(ANNOUNCEMENT_PATH))
@@ -269,12 +271,14 @@ def handle_announcement():
     LINFO("Finished inserting all announcements in: {:.3f}s".format(time.time() - start_time))
 
 
-def handle_news():
+def handle_news(db_settings, key='news'):
     news_found = 0
     total_news_inserted = 0
     total_duplicate_news = 0
-    NEWS_PATH = join(SCRIPT_ROOT_FOLDER, 'result/02_news/')
-    TARGET_TABLE = "News_Test"
+    NEWS_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    TARGET_TABLE = db_settings[key]['TARGET_TABLE']
+    LDEBUG("News Save Folder: {}".format(NEWS_PATH))
+    LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
 
     if not exists(NEWS_PATH):
         LERROR("{} does not exist! Please run 02_Company_News_Scraping.py".format(NEWS_PATH))
@@ -335,12 +339,14 @@ def handle_news():
     LINFO("Finished inserting all news in: {:.3f}s".format(time.time() - start_time))
 
 
-def handle_company_info():
+def handle_company_info(db_settings, key='company_info'):
     company_info_found = 0
     total_company_info_inserted = 0
     total_duplicate_company_info = 0
-    COMPANY_INFO_PATH = join(SCRIPT_ROOT_FOLDER, 'result/01_cmpinfo/')
-    TARGET_TABLE = "Company_Test"
+    COMPANY_INFO_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    TARGET_TABLE = db_settings[key]['TARGET_TABLE']
+    LDEBUG("Company Info Save Folder: {}".format(COMPANY_INFO_PATH))
+    LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
 
     if not exists(COMPANY_INFO_PATH):
         print("{} does not exist! Please run 01_Company_info_Scraper.py".format(COMPANY_INFO_PATH))
@@ -448,27 +454,42 @@ if __name__=="__main__":
         logger.debug("{:<10}: {}".format(key, DB_INFO[key]))
 
     if DB_INFO:
+        # Validating the connection to database and its cursor
         cnxn, cursor = setup_db_conn(DB_INFO)
         validate_conn(cursor)
 
-        # working sql: SELECT * FROM Company WHERE 公司簡稱='中華立鼎'
-        # sql = u'''
-        #    SELECT TOP(2) * FROM Company WHERE [{}]='{}' OR [{}]='{}';'''.format(u'公司簡稱', u'中華立鼎', u'公司名稱', u'慶云事業股份有限公司')
+        # Check if required file exists
+        DB_SETTINGS_FILE = 'resource/db_settings.json'
+        if not exists(DB_SETTINGS_FILE):
+            print("'{}' file does not exists".format(DB_SETTINGS_FILE))
+            quit()
 
-        # Get all files
-        # handle_announcement()
+        # Loading Database Settings
+        with open(DB_SETTINGS_FILE, 'r') as f:
+            db_settings = json.load(f)
 
-        # LINFO("Handling News content in: ")
-        # for _n in range(3, 0, -1):
-        #     LINFO("{} ".format(_n))
-        #     time.sleep(1)
-        # LINFO("Now handling News content")
+        # ==================== Main process start ====================
+        LINFO("Handling Announcement content in: ")
+        for _n in range(3, 0, -1):
+            LINFO("{} ".format(_n))
+            time.sleep(1)
+        handle_announcement(db_settings)
 
-        # handle_news()
-
-        # LINFO("Finished handling database operations")
+        LINFO("Handling News content in: ")
+        for _n in range(3, 0, -1):
+            LINFO("{} ".format(_n))
+            time.sleep(1)
+        LINFO("Now handling News content")
+        handle_news(db_settings)
         
-        handle_company_info()
+        LINFO("Handling Company Info in: ")
+        for _n in range(3, 0, -1):
+            LINFO("{} ".format(_n))
+            time.sleep(1)        
+        handle_company_info(db_settings)
+        # ==================== End of main process ====================
+
+        LINFO("Finished handling database operations")
 
     else:
         logger.critical("DB_INFO is empty")
