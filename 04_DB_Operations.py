@@ -67,7 +67,7 @@ with open(CMP_INDEX_MAP_PATH, 'r') as f:
 NEWS_TITLE_PATTERN = re.compile(r'(?P<news_title>.*) -(?P<date_posted>201[7|8]/[\d]{1,2}/[\d]{1,2})')
 
 # Translates the naming convention of the 00 to 04 scripts
-FILE_NAMING_INDEX_PATTERN = re.compile(r".*(?P<cmp_index>\d{2})_(?P<type>news|announcement)\.json")
+FILE_NAMING_INDEX_PATTERN = re.compile(r".*(?P<cmp_index>\d{2,3})_(?P<type>news|announcement)\.json")
 
 # The pattern of the news/announcement content. Identify the content source
 SOURCE_PATTERN = re.compile(u".*<摘錄(?P<source>.*)>.*".encode('utf8'))
