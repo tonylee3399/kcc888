@@ -80,6 +80,24 @@ with open(INFO_SOURCE_PATH, 'r') as f:
 def get_cmp_name(json_filename):
     cmp_index = re.match(FILE_NAMING_INDEX_PATTERN, json_filename)
     if cmp_index:
+        if cmp_index.group('cmp_index') == '00':
+            # This is a temporary fix
+            # Python has the following problem to determine the group.
+            # Further fix is needed
+            # In [67]: name
+            # Out[67]: '100_announcement.json'
+
+            # In [68]: name2
+            # Out[68]: '99_announcement.json'
+
+            # In [69]: FILE_NAMING_INDEX_PATTERN = re.compile(r".*(?P<cmp_index>\d{2,})_(?P<type>news|announcement)\.json")
+
+            # In [70]: re.findall(FILE_NAMING_INDEX_PATTERN, name)
+            # Out[70]: [('00', 'announcement')]
+
+            # In [71]: re.findall(FILE_NAMING_INDEX_PATTERN, name2)
+            # Out[71]: [('99', 'announcement')]
+            return CMP_INDEX_MAP["100"]
         return CMP_INDEX_MAP["{:0>2}".format(cmp_index.group('cmp_index'))]
     else:
         return "json_filename: {}. Company Name Not Found".format(json_filename)
