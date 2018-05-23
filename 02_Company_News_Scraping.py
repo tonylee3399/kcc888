@@ -8,13 +8,14 @@
 # In[9]:
 
 
+from __future__ import print_function
 import requests
 from bs4 import BeautifulSoup
 import json
 import io
 import urllib
 import os
-from os.path import exists, join
+from os.path import exists, join, basename
 import re
 import time
 # from time import strftime, gmtime
@@ -22,13 +23,24 @@ from datetime import datetime
 import logging
 import shutil
 
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
+
 # ==================== Logger Declaration ====================
 
 # Define the script root folder used for modules internal referencing
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
 # Define the log directory
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+LOG_DIR = join(SCRIPT_ROOT_FOLDER, GLOBAL['LOG_DIR'])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     time.sleep(1)
@@ -40,7 +52,8 @@ logger.setLevel(logging.DEBUG)
 
 # Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/02_Company_News_Scraping_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
-LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/02_Company_News_Scraping_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/02_Company_News_Scraping_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['LOG_NAME'].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -67,11 +80,11 @@ TITLE_YEARS_PATTERN = re.compile(r'-?(?P<year>201[7|8])/[0-9]{1,2}/[0-9]{1,2}')
 NEWS_YEAR = ['2017', '2018']        # News years to be included. Add '2016' to include 2016 news
 
 # 2. Paths and Files declaration
-NEWS_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, "result/02_news")
-REQUIRED_JSON_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_news_links.json')
+NEWS_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS["NEWS_RESULT_DIR"])
+REQUIRED_JSON_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS["REQUIRED_JSON_FILE"])
 
 # 2.1 Paths and Files existence check
-LINFO("Checking if '{}'' already existed".format(NEWS_RESULT_DIR))
+LINFO("Checking if '{}' already existed".format(NEWS_RESULT_DIR))
 if exists(NEWS_RESULT_DIR):
     LINFO("Deleting previous directory")
     shutil.rmtree(NEWS_RESULT_DIR)
@@ -194,21 +207,21 @@ for k, link in LINKS.iteritems():
 
                     # Write into a .json file
                     write_to_json(join(NEWS_RESULT_DIR, JSON_FILENAME), news_dict)
-                    # LINFO("Writing into JSON file...")
-                    # with io.open(join(NEWS_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                    #     data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
-                    #     fp.write(unicode(data))
-                    # LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
+
+                    # Stream to logs
+                    if SETTINGS["Log_Content"]:
+                        for k, v in news_dict.iteritems():
+                            LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
+
                     break
             else: # If no 2017 or 2018 news anymore --> Write to JSON file and terminate the loop. Continue to next company
                 LINFO("Terminating due to no {} news found anymore".format(" and ".join(NEWS_YEAR)))
                 # Write into a .json file
                 write_to_json(join(NEWS_RESULT_DIR, JSON_FILENAME), news_dict)
-                # LINFO("Writing into JSON file...")
-                # with io.open(join(NEWS_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                #     data = json.dumps(news_dict, fp, ensure_ascii=False, indent=4)
-                #     fp.write(unicode(data))
-                # LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
+                # Stream to logs
+                if SETTINGS["Log_Content"]:
+                    for k, v in news_dict.iteritems():
+                        LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
                 break
     else:
         LERROR("Page returns [{}] status code. Please check".format(page.status_code))
