@@ -6,16 +6,28 @@ import json
 import io
 import urllib
 import os
-from os.path import exists, join
+from os.path import exists, join, basename
 import re
 import time
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
 
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
+
+
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+LOG_DIR = join(SCRIPT_ROOT_FOLDER, GLOBAL['LOG_DIR'])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     time.sleep(1)
@@ -25,7 +37,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # fileHandler = logging.FileHandler("logs/03_Company_Announcement_Scraping_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
-LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/03_Company_Announcement_Scraping_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/03_Company_Announcement_Scraping_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['LOG_NAME'].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -44,13 +57,13 @@ LWARNING = lambda s: logger.warning(s)
 
 # Global Variable Declaration
 LINKS = []
-RESULT_PATH = join(SCRIPT_ROOT_FOLDER, "result/03_announcement")
+RESULT_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['RESULT_PATH'])
 if not exists(RESULT_PATH):
     LWARNING("'{0}' directory not exist. Creating folder '{0}'".format(RESULT_PATH))
     os.makedirs(RESULT_PATH)
     time.sleep(1)
 
-JSON_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_announcement_links.json')
+JSON_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['JSON_FILE'])
 if not exists(JSON_FILE):
     LERROR("'{}' does not exist".format(JSON_FILE))
     LERROR("Please run 'release/00_Get_Links.py' to generate links")
@@ -62,7 +75,21 @@ ANNOUNCEMENT_YEAR = ['2017', '2018']
 with open(JSON_FILE) as json_file:
     LINKS = json.load(json_file)
 
-# Algo start
+# ==================== Supporting method declaration ====================
+
+def write_to_json(path, data):
+    assert type(data) is dict, "data has to be a 'dict' data type"
+
+    LINFO("Writing into JSON file...")
+    with io.open(path, 'w', encoding='utf8') as fp:
+        json_data = json.dumps(data, fp, ensure_ascii=False, indent=4)
+        fp.write(unicode(json_data))
+    LINFO("Finished writing JSON file to: {}\n".format(join(RESULT_PATH, JSON_FILENAME).encode('utf8')))
+    
+
+
+# ==================== Main Process ====================
+
 _iteration = 0
 start_time = time.time()
 for k, link in LINKS.iteritems():
@@ -146,18 +173,21 @@ for k, link in LINKS.iteritems():
 
                     # Write into a .json file
                     LINFO("Writing into JSON file...")
-                    with io.open(join(RESULT_PATH, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                        data = json.dumps(announcement_dict, fp, ensure_ascii=False, indent=4)
-                        fp.write(unicode(data))
-                    LINFO("Finished writing JSON file to: {}\n".format(join(RESULT_PATH, JSON_FILENAME).encode('utf8')))
+                    write_to_json(join(RESULT_PATH, JSON_FILENAME), announcement_dict)
+                    # Stream to logs
+                    if SETTINGS["Log_Content"]:
+                        for k, v in announcement_dict.iteritems():
+                            LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
+
                     break
             else: # If no 2017 or 2018 announcement anymore --> Write to JSON file and terminate the loop. Continue to next company
                 LINFO("Terminating due to no {} announcement found anymore".format(" and ".join(ANNOUNCEMENT_YEAR)))
                 LINFO("Writing into JSON file...")
-                with io.open(join(RESULT_PATH, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                    data = json.dumps(announcement_dict, fp, ensure_ascii=False, indent=4)
-                    fp.write(unicode(data))
-                LINFO("Finished writing JSON file to: {}\n".format(join(RESULT_PATH, JSON_FILENAME).encode('utf8')))
+                write_to_json(join(RESULT_PATH, JSON_FILENAME), announcement_dict)
+                # Stream to logs
+                if SETTINGS["Log_Content"]:
+                    for k, v in announcement_dict.iteritems():
+                        LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
                 break
     else:
         LERROR("Page returns [{}] status code. Please check".format(page.status_code))
