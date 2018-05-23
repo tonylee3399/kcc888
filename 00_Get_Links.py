@@ -4,10 +4,21 @@ import json
 import io
 import urllib
 import os
-from os.path import join, exists
+from os.path import join, exists, basename
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
+
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
 
 # ==================== Logger Declaration ====================
 
@@ -15,7 +26,7 @@ import logging
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
 # Define the log directory
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+LOG_DIR = join(SCRIPT_ROOT_FOLDER, GLOBAL['LOG_DIR'])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
@@ -26,7 +37,8 @@ logger.setLevel(logging.DEBUG)
 
 # Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/00_Get_Links_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
-LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/00_Get_Links_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/00_Get_Links_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS["LOG_NAME"].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -48,25 +60,28 @@ LWARNING = lambda s: logger.warning(s)
 # ==================== Global Variable Declaration ====================
 
 # 1. Variables
-URL = 'http://www.berich.com.tw/DP/OrderList/List_kakelu.asp'                   # Main URL to scrape
+URL = SETTINGS["MAIN_URL"]                   # Main URL to scrape
 
-COMPANY_INFO_PRECEDING_URL = "http://www.berich.com.tw/DP/Cmpinfo/Cmpinfo.asp?cmpname="                 # Common variable
-COMPANY_NEWS_PRECEDING_URL = "http://www.berich.com.tw/DP/Cmpinfo/Cmpinfo_News.asp?cmpname="            # Common variable
-COMPANY_ANNOUNCEMENT_PRECEDING_URL = "http://www.berich.com.tw/DP/Cmpinfo/Cmpinfo_Ancs.asp?cmpname="    # Common variable
-TARGET_DATA_ATTRIBUTE = "cmd_name_sin"
+COMPANY_INFO_PRECEDING_URL = SETTINGS['COMPANY_INFO_PRECEDING_URL']                    # Common variable
+COMPANY_NEWS_PRECEDING_URL = SETTINGS['COMPANY_NEWS_PRECEDING_URL']                    # Common variable
+COMPANY_ANNOUNCEMENT_PRECEDING_URL = SETTINGS['COMPANY_ANNOUNCEMENT_PRECEDING_URL']    # Common variable
+TARGET_DATA_ATTRIBUTE = SETTINGS['TARGET_DATA_ATTRIBUTE']
+LINFO(" ".join(["Target Data Attribute:", TARGET_DATA_ATTRIBUTE]))
 
 # 2. Paths and Files Declaration
-COMPANY_SAVE_FOLDER = join(SCRIPT_ROOT_FOLDER, 'resource')
+COMPANY_SAVE_FOLDER = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_SAVE_FOLDER'])
 if not exists(COMPANY_SAVE_FOLDER):
     # Creating folder if directory does not exist
     LINFO("'{0}' directory not exist. Creating folder '{0}'".format(COMPANY_SAVE_FOLDER))
     os.makedirs(COMPANY_SAVE_FOLDER)
 
 # 2.1 Paths derived from COMPANY_SAVE_FOLDER
-COMPANY_INFO_SAVE_PATH = join(COMPANY_SAVE_FOLDER, 'cmp_info_links.json')
-COMPANY_NEWS_SAVE_PATH = join(COMPANY_SAVE_FOLDER, 'cmp_news_links.json')
-COMPANY_ANNOUNCEMENT_SAVE_PATH = join(COMPANY_SAVE_FOLDER, 'cmp_announcement_links.json')
-
+COMPANY_INFO_SAVE_PATH = join(COMPANY_SAVE_FOLDER, SETTINGS['COMPANY_INFO_SAVE_PATH'])
+COMPANY_NEWS_SAVE_PATH = join(COMPANY_SAVE_FOLDER, SETTINGS['COMPANY_NEWS_SAVE_PATH'])
+COMPANY_ANNOUNCEMENT_SAVE_PATH = join(COMPANY_SAVE_FOLDER, SETTINGS['COMPANY_ANNOUNCEMENT_SAVE_PATH'])
+LDEBUG(" ".join(["Info Save Path:", COMPANY_INFO_SAVE_PATH]))
+LDEBUG(" ".join(["News Save Path:", COMPANY_NEWS_SAVE_PATH]))
+LDEBUG(" ".join(["Announcement Save Path:", COMPANY_ANNOUNCEMENT_SAVE_PATH]))
 
 # ==================== Main Process ====================
 
@@ -101,10 +116,9 @@ if page.status_code == 200:
             cmp_info_links[i+1] = COMPANY_INFO_PRECEDING_URL + urllib.quote_plus(big5_link)     # Process and convert URL to big5 format
             cmp_news_links[i+1] = COMPANY_NEWS_PRECEDING_URL + urllib.quote_plus(big5_link)     # Process and convert URL to big5 format
             cmp_announcement_links[i+1] = COMPANY_ANNOUNCEMENT_PRECEDING_URL + urllib.quote_plus(big5_link) # Process and convert URL to big5 format
-
-        # ==================== Algorithm Finish ====================
+            LDEBUG("{}. ".format(i+1) + " -> ".join([big5_link.decode('big5').encode('utf8'), urllib.quote_plus(big5_link)]))
         LINFO("Finish iterating through all found links")
-
+        # ==================== Algorithm Finish ====================
 
         # ==================== Information Export ====================
         LINFO("Saving captured INFO links into {}".format(COMPANY_INFO_SAVE_PATH))
