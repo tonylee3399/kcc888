@@ -1,11 +1,23 @@
+from __future__ import print_function
 import json
 import re
 import io
 import os
-from os.path import join, exists
+from os.path import join, exists, basename
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
+
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
 
 # ==================== Logger Declaration ====================
 
@@ -13,7 +25,7 @@ import logging
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
 # Define the log directory
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+LOG_DIR = join(SCRIPT_ROOT_FOLDER, GLOBAL['LOG_DIR'])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
@@ -24,7 +36,8 @@ logger.setLevel(logging.DEBUG)
 
 # Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/00_generate_company_name_parser_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
-LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/00_generate_company_name_parser_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/00_generate_company_name_parser_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['LOG_NAME'].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -49,9 +62,9 @@ LWARNING = lambda s: logger.warning(s)
 raw_lines = []
 
 # 2. Paths and Files Declaration
-REQUIRED_FILE = join(SCRIPT_ROOT_FOLDER, 'reference/parse_bifoo.php')
-SAVE_DIR = join(SCRIPT_ROOT_FOLDER, 'resource')
-SAVE_FILENAME = 'company_name_parser.json'
+REQUIRED_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['REQUIRED_FILE'])
+SAVE_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['SAVE_DIR'])
+SAVE_FILENAME = SETTINGS['SAVE_FILENAME']
 
 # 2.1. Check if saving directory exists
 if not exists(SAVE_DIR):
@@ -68,7 +81,7 @@ if exists(REQUIRED_FILE):
         for line in f.readlines():
             raw_lines.append(line)
         LDEBUG("Finished reading all content")
-        LDEBUG(raw_lines)
+        LDEBUG("\n".join(raw_lines))
 else:
     # If doesn't exist: Need to supply parse_bifoo.php to this 
     LERROR("'{}' required file does not exists!! Please supply!".format(REQUIRED_FILE))
@@ -96,7 +109,8 @@ LINFO("Finished decoding..")
 # 3.3 Zip all information into a dictionary to prepare feeding to JSON module
 LINFO("Creating dictionary containing all information")
 dictionary = dict(zip(result_bifeng, result_db))
-LDEBUG(dictionary)
+for k, v in dictionary.iteritems():
+    LDEBUG(" -> ".join([k.encode('utf8'), v.encode('utf8')]))
 
 # 4. Exporting the dictionary to JSON file
 with io.open(join(SAVE_DIR, SAVE_FILENAME), 'w', encoding='utf8') as f:
