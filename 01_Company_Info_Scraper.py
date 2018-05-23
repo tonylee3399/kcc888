@@ -8,7 +8,7 @@
 # <b>V06</b> - Finishing touch<br>
 # <b>V07</b> - Pre-release prorotype
 
-
+from __future__ import print_function
 import requests
 import bs4
 from bs4 import BeautifulSoup
@@ -19,9 +19,21 @@ import time
 # from time import strftime, gmtime
 from datetime import datetime
 import os
-from os.path import join, exists
+from os.path import join, exists, basename
 import logging
 import shutil
+
+
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
 
 # ==================== Logger Declaration ====================
 
@@ -29,7 +41,7 @@ import shutil
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
 # Define the log directory
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+LOG_DIR = join(SCRIPT_ROOT_FOLDER, GLOBAL['LOG_DIR'])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     time.sleep(1)
@@ -41,7 +53,8 @@ logger.setLevel(logging.DEBUG)
 
 # Define the file handler for root logger
 # fileHandler = logging.FileHandler("logs/01_Company_Info_Scraper_{}.log".format(strftime("%Y-%m-%d_%H%M%S", gmtime())))
-LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/01_Company_Info_Scraper_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH = join(SCRIPT_ROOT_FOLDER, "logs/01_Company_Info_Scraper_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['LOG_NAME'].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -65,21 +78,23 @@ LWARNING = lambda s: logger.warning(s)
 LINKS = []
 TARGET_TITLE_VALUE_CLASS = "cmpinfo_title_bg|cmpinfo_nbo_bg"
 COMPANY_NAME_CLASS = "cmpinfo_cmp_b|cmpinfo_cmp"
+LDEBUG(" ".join(["Target Title Value Class:", TARGET_TITLE_VALUE_CLASS]))
+LDEBUG(" ".join(["Target Company Name Class:", COMPANY_NAME_CLASS]))
 
 COMPANY_RANK_INDEX = {}     # Used for tracking the company rank
 
 # 2. Paths and Files declaration
-COMPANY_INFO_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, "result/01_cmpinfo")
-COMPANY_NAMES_JSON = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_info_links.json')
-COMPANY_NAME_PARSER_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/company_name_parser.json')
-RESOURCE_DIR = join(SCRIPT_ROOT_FOLDER, "resource")
+COMPANY_INFO_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_INFO_RESULT_DIR'])
+COMPANY_NAMES_JSON = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_NAMES_JSON'])
+COMPANY_NAME_PARSER_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_NAME_PARSER_FILE'])
+RESOURCE_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['RESOURCE_DIR'])
 
 # 2.1. Derivative of RESOURCE_DIR
-COMPANY_RANK_INDEX_JSON_FILENAME = join(RESOURCE_DIR, "company_rank_index.json")
+COMPANY_RANK_INDEX_JSON_FILENAME = join(RESOURCE_DIR, SETTINGS['COMPANY_RANK_INDEX_JSON_FILENAME'])
 
 
 # 2.2. Directory existence check
-COMPANY_INFO_JSON_SOURCE_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/cmp_info_links.json')
+COMPANY_INFO_JSON_SOURCE_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_INFO_JSON_SOURCE_FILE'])
 if not exists(COMPANY_INFO_JSON_SOURCE_FILE):
     LERROR("'{}' does not exist".format(COMPANY_INFO_JSON_SOURCE_FILE))
     LERROR("Please run '11_Get_Links.py' to generate links")
@@ -105,8 +120,7 @@ if not exists(COMPANY_INFO_RESULT_DIR):
 def parse_company_name(company_name):
     '''Parse company name discrepancy between Berich.com and Database'''
     assert type(company_name) == unicode, "company_name has to be unicode typed. Type: {}".format(type(company_name))
-    
-    
+        
     pattern = re.compile(r"(?P<name>.*)\((?P<status>.*)\)")
     
     # If pattern does not match, return original company_name
@@ -203,7 +217,8 @@ for k, v in LINKS.iteritems():
             DATA[unicode(_t)] = unicode(_v)
             i += 1
         LINFO("Finished populating company information dictionary!")
-        LDEBUG(DATA)
+        for k, v in DATA.iteritems():
+            LDEBUG(": ".join([k.encode('utf8'), v.encode('utf8')]))
 
         # Write into a .json file
         LINFO("Writing into JSON file...")
