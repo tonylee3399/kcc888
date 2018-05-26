@@ -80,7 +80,7 @@ if __name__ == "__main__":
     LINFO("Running company announcement scraping")
     # announcement = Process(target=scrape_announcement)
     # announcement.start()
-    announcement = subprocess.Popen("python {}".format(join(SCRIPT_ROOT_FOLDER, "03_Company_Annoucement_Scraping.py")), shell=True)
+    announcement = subprocess.Popen("python {}".format(join(SCRIPT_ROOT_FOLDER, "03_Company_Announcement_Scraping.py")), shell=True)
 
     # info.join()
     # news.join()
