@@ -12,6 +12,7 @@ import time
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
+import shutil
 
 # ==================== Inject Dependencies ====================
 settings_file = "resource/settings.json"
@@ -58,6 +59,12 @@ LWARNING = lambda s: logger.warning(s)
 # Global Variable Declaration
 LINKS = []
 RESULT_PATH = join(SCRIPT_ROOT_FOLDER, SETTINGS['RESULT_PATH'])
+
+LINFO("Checking if '{}' already existed".format(RESULT_PATH))
+if exists(RESULT_PATH):
+    LINFO("Deleting previous directory")
+    shutil.rmtree(RESULT_PATH)
+
 if not exists(RESULT_PATH):
     LWARNING("'{0}' directory not exist. Creating folder '{0}'".format(RESULT_PATH))
     os.makedirs(RESULT_PATH)
