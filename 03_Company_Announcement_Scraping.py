@@ -152,7 +152,7 @@ for k, link in LINKS.iteritems():
                 LINFO("Checking for next pages...")
                 next_page = [a for a in soup.find_all('a') if a.get_text() == u'下一頁']  # return [] if not available
                 if next_page: # if current page has next page
-                    _second = 0.5
+                    _second = GLOBAL["DELAY"]
                     LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
                     time.sleep(_second)
                     LINFO("Waking up.. Souping next announcement page..\n")
@@ -194,7 +194,7 @@ for k, link in LINKS.iteritems():
         LERROR("Continue to the next link")
         
     LINFO("Total announcement found: {}\n".format(number_of_announcement_found))
-    _second = 0.5
+    _second = GLOBAL["DELAY"]
     LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
     time.sleep(_second)
     LINFO("Waking up.. Souping next company..\n")

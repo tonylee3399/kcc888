@@ -228,7 +228,7 @@ for k, v in LINKS.iteritems():
         LINFO("Finished writing JSON file to: {}".format(join(COMPANY_INFO_RESULT_DIR, JSON_FILENAME).encode('utf8')))
 
         # Define a sleep interval. Recommended to not set to 0 for not spamming the server
-        _second = 0.5
+        _second = GLOBAL["DELAY"]
         if _second:
             LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
             time.sleep(_second)
