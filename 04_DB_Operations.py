@@ -7,15 +7,27 @@ from os.path import exists, join
 import pyodbc
 import re
 import os
-from os.path import exists, isfile, join
+from os.path import exists, isfile, join, basename
 import time
 # from time import strftime, gmtime
 from datetime import datetime
 import logging
 
-SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
+# ==================== Inject Dependencies ====================
+settings_file = "resource/settings.json"
+if exists(settings_file):
+    with open(settings_file, 'r') as f:
+        GLOBAL = json.load(f)
+        SETTINGS = GLOBAL[basename(__file__)]
+        GLOBAL = GLOBAL['global']
+else:
+    print("'{}' does not exists! Contact author!".format(settings_file))
+    quit()
 
-LOG_DIR = join(SCRIPT_ROOT_FOLDER, "logs")
+
+root_dir = os.path.dirname(os.path.abspath(__file__))
+
+LOG_DIR = join(root_dir, GLOBAL["LOG_DIR"])
 if not exists(LOG_DIR):
     os.makedirs(LOG_DIR)
     time.sleep(1)
@@ -25,7 +37,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Logger L type
-LOG_PATH1 = join(SCRIPT_ROOT_FOLDER, "logs/04_DB_Operations_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+# LOG_PATH1 = join(root_dir, "logs/04_DB_Operations_{}.log".format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
+LOG_PATH1 = join(root_dir, SETTINGS["LOG_NAME"].format(datetime.strftime(datetime.now(), "%Y-%m-%d_%H%M%S")))
 fileHandler = logging.FileHandler(LOG_PATH1)
 fileHandler.setFormatter(logFormatter)
 fileHandler.setLevel(logging.DEBUG)
@@ -45,21 +58,22 @@ LWARNING = lambda s: logger.warning(s)
 id_logger = logging.getLogger("idLogger")
 id_logger.setLevel(logging.DEBUG)
 
-LOG_PATH2 = join(SCRIPT_ROOT_FOLDER, "logs/000_inserted_id.log")
+# LOG_PATH2 = join(root_dir, "logs/000_inserted_id.log")
+LOG_PATH2 = join(root_dir, SETTINGS["INSERTED_ID_LOG_NAME"])
 fileHandler3 = logging.FileHandler(LOG_PATH2)
 fileHandler3.setFormatter(logFormatter)
 fileHandler3.setLevel(logging.DEBUG)
 id_logger.addHandler(fileHandler3)
 
 
-DB_INFO_JSON_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/db_info.json')
+DB_INFO_JSON_FILE = join(root_dir, SETTINGS["DB_INFO_JSON_FILE"])
 KEY_LIST = ['ip', 'database', 'uid', 'pw']
 DB_INFO = None
 REGEX_TABLE_PATTERN = re.compile(".* FROM (?P<table_name>\w*) (.*)", re.IGNORECASE)
 
 # Get company rank through its index
 CMP_INDEX_MAP = None
-CMP_INDEX_MAP_PATH = join(SCRIPT_ROOT_FOLDER, 'resource/company_rank_index.json')
+CMP_INDEX_MAP_PATH = join(root_dir, SETTINGS["CMP_INDEX_MAP_PATH"])
 with open(CMP_INDEX_MAP_PATH, 'r') as f:
     CMP_INDEX_MAP = json.load(f)
 
@@ -73,7 +87,7 @@ FILE_NAMING_INDEX_PATTERN = re.compile(r".*(?P<cmp_index>\d{2,3})_(?P<type>news|
 SOURCE_PATTERN = re.compile(u".*<摘錄(?P<source>.*)>.*".encode('utf8'))
 
 # This variable is used for mapping company name scraped from Berich to DB friendly
-INFO_SOURCE_PATH = join(SCRIPT_ROOT_FOLDER, 'resource/info_source.json')
+INFO_SOURCE_PATH = join(root_dir, SETTINGS["INFO_SOURCE_PATH"])
 with open(INFO_SOURCE_PATH, 'r') as f:
     SOURCE_MAP = json.load(f)
 
@@ -225,7 +239,7 @@ def handle_announcement(db_settings, key='announcement'):
     announcement_found = 0
     total_announcement_inserted = 0
     total_duplicate_announcement = 0
-    ANNOUNCEMENT_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    ANNOUNCEMENT_PATH = join(root_dir, db_settings[key]['SAVE_PATH'])
     TARGET_TABLE = db_settings[key]['TARGET_TABLE']
     LDEBUG("Announcement Save Folder: {}".format(ANNOUNCEMENT_PATH))
     LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
@@ -293,7 +307,7 @@ def handle_news(db_settings, key='news'):
     news_found = 0
     total_news_inserted = 0
     total_duplicate_news = 0
-    NEWS_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    NEWS_PATH = join(root_dir, db_settings[key]['SAVE_PATH'])
     TARGET_TABLE = db_settings[key]['TARGET_TABLE']
     LDEBUG("News Save Folder: {}".format(NEWS_PATH))
     LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
@@ -361,7 +375,7 @@ def handle_company_info(db_settings, key='company_info'):
     company_info_found = 0
     total_company_info_inserted = 0
     total_duplicate_company_info = 0
-    COMPANY_INFO_PATH = join(SCRIPT_ROOT_FOLDER, db_settings[key]['SAVE_PATH'])
+    COMPANY_INFO_PATH = join(root_dir, db_settings[key]['SAVE_PATH'])
     TARGET_TABLE = db_settings[key]['TARGET_TABLE']
     LDEBUG("Company Info Save Folder: {}".format(COMPANY_INFO_PATH))
     LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
