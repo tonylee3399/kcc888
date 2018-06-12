@@ -23,8 +23,10 @@ from datetime import datetime
 import logging
 import shutil
 
+SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
+
 # ==================== Inject Dependencies ====================
-settings_file = "resource/settings.json"
+settings_file = join(SCRIPT_ROOT_FOLDER, "resource/settings.json")
 if exists(settings_file):
     with open(settings_file, 'r') as f:
         GLOBAL = json.load(f)
