@@ -1,3 +1,5 @@
+# coding: utf8
+
 # # Changelog
 # <b>V00</b> - Original commit<br>
 # <b>V01</b> - added `handle_content()` to recursively find the last `NavigableString` to print<br>
@@ -84,6 +86,7 @@ LDEBUG(" ".join(["Target Title Value Class:", TARGET_TITLE_VALUE_CLASS]))
 LDEBUG(" ".join(["Target Company Name Class:", COMPANY_NAME_CLASS]))
 
 COMPANY_RANK_INDEX = {}     # Used for tracking the company rank
+COMPANY_STOCK_NO   = {}     # Used for tracking the company stock number
 
 # 2. Paths and Files declaration
 COMPANY_INFO_RESULT_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['COMPANY_INFO_RESULT_DIR'])
@@ -93,6 +96,7 @@ RESOURCE_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['RESOURCE_DIR'])
 
 # 2.1. Derivative of RESOURCE_DIR
 COMPANY_RANK_INDEX_JSON_FILENAME = join(RESOURCE_DIR, SETTINGS['COMPANY_RANK_INDEX_JSON_FILENAME'])
+COMPANY_STOCK_NO_JSON_FILENAME = join(RESOURCE_DIR, SETTINGS['COMPANY_STOCK_NO_JSON_FILENAME'])
 
 
 # 2.2. Directory existence check
@@ -236,6 +240,9 @@ for k, v in LINKS.iteritems():
             time.sleep(_second)
             LINFO("Waking up.. Starting next iteration..\n")
 
+        # Insert the company stock number
+        COMPANY_STOCK_NO[DATA["Company Name"]] = DATA[u"股票代號"]
+
         # Increase iteration counter
         _iteration += 1
     else:
@@ -251,5 +258,12 @@ with io.open(COMPANY_RANK_INDEX_JSON_FILENAME, 'w', encoding='utf8') as fp:
     data = json.dumps(COMPANY_RANK_INDEX, fp, ensure_ascii=False, indent=4, sort_keys=True)
     fp.write(unicode(data))
 LINFO("Finished writing JSON file to: {}\n".format(COMPANY_RANK_INDEX_JSON_FILENAME.encode('utf8')))
+
+# Write COMPANY_RANK_INDEX into a .json file
+LINFO("Writing into JSON file...")
+with io.open(COMPANY_STOCK_NO_JSON_FILENAME, 'w', encoding='utf8') as fp:
+    data = json.dumps(COMPANY_STOCK_NO, fp, ensure_ascii=False, indent=4, sort_keys=True)
+    fp.write(unicode(data))
+LINFO("Finished writing JSON file to: {}\n".format(COMPANY_STOCK_NO_JSON_FILENAME.encode('utf8')))
 
 LINFO("Finished scraping all data in: {:.3f}s".format(time.time() - start_time))
