@@ -493,7 +493,7 @@ if __name__=="__main__":
         validate_conn(cursor)
 
         # Check if required file exists
-        DB_SETTINGS_FILE = 'resource/db_settings.json'
+        DB_SETTINGS_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/db_settings.json')
         if not exists(DB_SETTINGS_FILE):
             print("'{}' file does not exists".format(DB_SETTINGS_FILE))
             quit()
