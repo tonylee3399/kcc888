@@ -144,21 +144,30 @@ for k, link in LINKS.iteritems():
             soup = BeautifulSoup(page.content, 'html5lib')
 
             # 2. Find the table containing the information with the the specified attribute
-            LINFO("Locating news information table...")
-            table = soup.find('table', {'width':'100%', 'cellpadding':'1', 'cellspacing':'1'})
-            LINFO("Finished locating news information table!")
+            # LINFO("Locating news information table...")
+            # table = soup.find('table', {'width':'100%', 'cellpadding':'1', 'cellspacing':'1'})
+            # LINFO("Finished locating news information table!")
 
             # 3. Find the `td` tags with `onclick`: starting with `hello`, and get the text
             LINFO("Locating news titles...")
-            news_title = soup.find_all('td', {'onclick':re.compile('^hello.*')})
-            news_title = [news.get_text(separator='<br>', strip=True) for news in news_title]
+            # news_title = soup.find_all('td', {'onclick':re.compile('^hello.*')})
+            # news_title = [news.get_text(separator='<br>', strip=True) for news in news_title]
+            news_title = [title.get_text(separator='<br>', strip=True) for title in soup.select('td.cmp_news_02_Sharon')]
+            LINFO("Finished locating {} news titles...".format(len(news_title)))
             LINFO("Finished locating news titles...")
             
             # 4. Find the news content with `class`: `Sharon_add_news_content`
             LINFO("Locating news content...")
-            news_contents = soup.find_all('td', {'class':'Sharon_add_news_content'})
-            news_contents = [content.get_text(separator='<br>', strip=True) for content in news_contents]
+            # news_contents = soup.find_all('td', {'class':'Sharon_add_news_content'})
+            # news_contents = [content.get_text(separator='<br>', strip=True) for content in news_contents]
+            news_contents = [content.get_text(separator='<br>', strip=True) for content in soup.select('td.Sharon_add_news_content')]
+            LINFO("Finished locating {} news contents...".format(len(news_contents)))
             LINFO("Finished locating news contents!")
+
+            # Add another check if the content of this website shows 無資料
+            content_is_empty = [p for p in soup.select('p font') if p.get_text() == u"無 資 料"]
+            if content_is_empty:
+                LINFO("The content of this website is empty")
 
             # Every page only have 20 news to show
             # Populating the news dictionary as <title> : <content>
@@ -185,7 +194,7 @@ for k, link in LINKS.iteritems():
             if not NEWS_YEARS_NOT_FOUND:  # If still have 2017 or 2018 news --> check for next page
                 LINFO("Checking for next pages...")
                 # Next page is defined with a 下一頁 button
-                next_page = [a for a in soup.find_all('a') if a.get_text() == u'下一頁']  # return [] if not available
+                next_page = [a for a in soup.select('td[onmouseover] > a') if a.get_text() == u'下一頁']  # return [] if not available
                 if next_page: # If current page has next page
                     _second = GLOBAL["DELAY"]
                     if _second:

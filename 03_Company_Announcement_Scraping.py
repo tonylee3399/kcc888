@@ -119,23 +119,29 @@ for k, link in LINKS.iteritems():
             soup = BeautifulSoup(page.content, 'html5lib')
 
             # 2. Find the table containing the information with the the specified attribute
-            LINFO("Locating announcement information table...")
-            table = soup.find('table', {'width':'100%', 'cellpadding':'1', 'cellspacing':'1'})
-            LINFO("Finished locating announcement information table!")
+            # LINFO("Locating announcement information table...")
+            # table = soup.find('table', {'width':'100%', 'cellpadding':'1', 'cellspacing':'1'})
+            # LINFO("Finished locating announcement information table!")
 
             # 3. Find the `td` tags with `onclick`: starting with `hello`, and get the text
             LINFO("Locating announcement titles...")
-            announcement_title = soup.find_all('td', {'onclick':re.compile('^hello.*')})
-            announcement_title = [announcement.get_text(separator='<br>', strip=True) for announcement in announcement_title]
-            LINFO("Finished locating announcement titles...")
+            # announcement_title = soup.find_all('td', {'onclick':re.compile('^hello.*')})
+            # announcement_title = [announcement.get_text(separator='<br>', strip=True) for announcement in announcement_title]
+            announcement_title = [title.get_text(separator='<br>', strip=True) for title in soup.select('td.cmp_news_02_Sharon')]
+            LINFO("Finished locating {} announcement titles...".format(len(announcement_title)))
             
 
             # 4. Find the announcement content with `class`: `Sharon_add_news_content`
             LINFO("Locating announcement content...")
-            announcement_contents = soup.find_all('td', {'class':'Sharon_add_news_content'})
-            announcement_contents = [content.get_text(separator='<br>', strip=True) for content in announcement_contents]
-            LINFO("Finished locating announcement contents!")
+            # announcement_contents = soup.find_all('td', {'class':'Sharon_add_news_content'})
+            # announcement_contents = [content.get_text(separator='<br>', strip=True) for content in announcement_contents]
+            announcement_contents = [content.get_text(separator='<br>', strip=True) for content in soup.select('td.Sharon_add_news_content')]
+            LINFO("Finished locating {} announcement contents!".format(len(announcement_contents)))
 
+            # Add another check if the content of this website shows 無資料
+            content_is_empty = [p for p in soup.select('p font') if p.get_text() == u"無 資 料"]
+            if content_is_empty:
+                LINFO("The content of this website is empty")
 
             # Populating the announcement dictionary as <announcement_index> : <{<title>: <content>}>
             for t, c in zip(announcement_title, announcement_contents):
@@ -159,7 +165,7 @@ for k, link in LINKS.iteritems():
             # Check for next page, reiterate if found
             if not ANNOUNCEMENT_YEARS_NOT_FOUND:  # If still have 2017 or 2018 announcement --> check for next page
                 LINFO("Checking for next pages...")
-                next_page = [a for a in soup.find_all('a') if a.get_text() == u'下一頁']  # return [] if not available
+                next_page = [a for a in soup.select('td[onmouseover] > a') if a.get_text() == u'下一頁']  # return [] if not available
                 if next_page: # if current page has next page
                     _second = GLOBAL["DELAY"]
                     LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
@@ -181,7 +187,6 @@ for k, link in LINKS.iteritems():
                     LINFO("No next page found! End of the announcement section")
 
                     # Write into a .json file
-                    LINFO("Writing into JSON file...")
                     write_to_json(join(RESULT_PATH, JSON_FILENAME), announcement_dict)
                     # Stream to logs
                     if SETTINGS["Log_Content"]:
@@ -191,7 +196,6 @@ for k, link in LINKS.iteritems():
                     break
             else: # If no 2017 or 2018 announcement anymore --> Write to JSON file and terminate the loop. Continue to next company
                 LINFO("Terminating due to no {} announcement found anymore".format(" and ".join(ANNOUNCEMENT_YEAR)))
-                LINFO("Writing into JSON file...")
                 write_to_json(join(RESULT_PATH, JSON_FILENAME), announcement_dict)
                 # Stream to logs
                 if SETTINGS["Log_Content"]:
