@@ -424,6 +424,9 @@ def handle_company_info(db_settings, key='company_info'):
 
             # Check if already have company_info with the title
             # Condition: Have same stock_no and same short_name
+            # Altered condition: Having stock_no '' will cause algorithm to think DB already has it
+            # Treat _stock_no == '' and fill with '-'
+            _stock_no = '-' if _stock_no == '' else _stock_no
             sql = u'''
                 SELECT TOP(1) * FROM {table_name} 
                 WHERE 
