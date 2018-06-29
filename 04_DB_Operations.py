@@ -424,17 +424,12 @@ def handle_company_info(db_settings, key='company_info'):
 
             # Check if already have company_info with the title
             # Condition: Have same stock_no and same short_name
-            # Altered condition: Having stock_no '' will cause algorithm to think DB already has it
-            # Treat _stock_no == '' and fill with '-'
-            _stock_no = '-' if _stock_no == '' else _stock_no
             sql = u'''
                 SELECT TOP(1) * FROM {table_name} 
                 WHERE 
-                    [股票代號]=N'{stock_no}' OR [公司名稱]=N'{long_name}' OR [公司簡稱]=N'{short_name}' OR
-                    [網址]=N'{cmp_web}'
+                    [公司名稱]=N'{long_name}' OR [公司簡稱]=N'{short_name}' OR [網址]=N'{cmp_web}'
 
-            '''.format(table_name=TARGET_TABLE, stock_no=_stock_no, long_name=_long_name, short_name=_short_name,
-                       cmp_web=_cmp_web)
+            '''.format(table_name=TARGET_TABLE, long_name=_long_name, short_name=_short_name, cmp_web=_cmp_web)
             LDEBUG(sql)
             cursor.execute(sql)
             if not cursor.fetchone():   # If it NOT returns an object
