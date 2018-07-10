@@ -24,6 +24,7 @@ import os
 from os.path import join, exists, basename
 import logging
 import shutil
+from util import time_the_process
 
 
 SCRIPT_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
@@ -123,6 +124,7 @@ if not exists(COMPANY_INFO_RESULT_DIR):
 
 
 # Supporting method declaration
+@time_the_process
 def parse_company_name(company_name):
     '''Parse company name discrepancy between Berich.com and Database'''
     assert type(company_name) == unicode, "company_name has to be unicode typed. Type: {}".format(type(company_name))
