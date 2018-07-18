@@ -475,55 +475,60 @@ def handle_company_info(db_settings, key='company_info'):
     LINFO("Finished inserting all company_info in: {:.3f}s".format(time.time() - start_time))
 
 if __name__=="__main__":
-    start_time = time.time()
-    logger.info("Checking resource availability")
-    if exists(DB_INFO_JSON_FILE):
-        with open(DB_INFO_JSON_FILE, 'r') as f:
-            DB_INFO = json.load(f)
-            logger.debug("Captured DB_INFO: {}".format(DB_INFO))
+    try:
+        start_time = time.time()
+        logger.info("Checking resource availability")
+        if exists(DB_INFO_JSON_FILE):
+            with open(DB_INFO_JSON_FILE, 'r') as f:
+                DB_INFO = json.load(f)
+                logger.debug("Captured DB_INFO: {}".format(DB_INFO))
 
-    for key in KEY_LIST:
-        logger.debug("{:<10}: {}".format(key, DB_INFO[key]))
+        for key in KEY_LIST:
+            logger.debug("{:<10}: {}".format(key, DB_INFO[key]))
 
-    if DB_INFO:
-        # Validating the connection to database and its cursor
-        cnxn, cursor = setup_db_conn(DB_INFO)
-        validate_conn(cursor)
+        if DB_INFO:
+            # Validating the connection to database and its cursor
+            cnxn, cursor = setup_db_conn(DB_INFO)
+            validate_conn(cursor)
 
-        # Check if required file exists
-        DB_SETTINGS_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/db_settings.json')
-        if not exists(DB_SETTINGS_FILE):
-            print("'{}' file does not exists".format(DB_SETTINGS_FILE))
-            quit()
+            # Check if required file exists
+            DB_SETTINGS_FILE = join(SCRIPT_ROOT_FOLDER, 'resource/db_settings.json')
+            if not exists(DB_SETTINGS_FILE):
+                print("'{}' file does not exists".format(DB_SETTINGS_FILE))
+                quit()
 
-        # Loading Database Settings
-        with open(DB_SETTINGS_FILE, 'r') as f:
-            db_settings = json.load(f)
+            # Loading Database Settings
+            with open(DB_SETTINGS_FILE, 'r') as f:
+                db_settings = json.load(f)
 
-        # ==================== Main process start ====================
-        LINFO("Handling Announcement content in: ")
-        for _n in range(3, 0, -1):
-            LINFO("{} ".format(_n))
-            time.sleep(1)
-        handle_announcement(db_settings)
+            # ==================== Main process start ====================
+            LINFO("Handling Announcement content in: ")
+            for _n in range(3, 0, -1):
+                LINFO("{} ".format(_n))
+                time.sleep(1)
+            handle_announcement(db_settings)
 
-        LINFO("Handling News content in: ")
-        for _n in range(3, 0, -1):
-            LINFO("{} ".format(_n))
-            time.sleep(1)
-        LINFO("Now handling News content")
-        handle_news(db_settings)
-        
-        LINFO("Handling Company Info in: ")
-        for _n in range(3, 0, -1):
-            LINFO("{} ".format(_n))
-            time.sleep(1)        
-        handle_company_info(db_settings)
-        # ==================== End of main process ====================
+            LINFO("Handling News content in: ")
+            for _n in range(3, 0, -1):
+                LINFO("{} ".format(_n))
+                time.sleep(1)
+            LINFO("Now handling News content")
+            handle_news(db_settings)
+            
+            LINFO("Handling Company Info in: ")
+            for _n in range(3, 0, -1):
+                LINFO("{} ".format(_n))
+                time.sleep(1)        
+            handle_company_info(db_settings)
+            # ==================== End of main process ====================
 
-        LINFO("Finished handling database operations")
+            LINFO("Finished handling database operations")
 
-    else:
-        logger.critical("DB_INFO is empty")
+        else:
+            logger.critical("DB_INFO is empty")
+    except Exception as e:
+        LERROR("'{}' exception was raised!".format(type(e)))
+        LERROR("Message: {}".format(' - '.join(e.args)))
+        LWARNING("Script finished with exception(s)!")
 
 
