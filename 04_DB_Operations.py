@@ -267,14 +267,14 @@ def handle_announcement(db_settings, key='announcement'):
                 # Check if already have announcement with the title
                 # Condition: Have same title and same news
                 sql = u'''
-                    SELECT * FROM {table_name} WHERE [Name]=N'{title}' AND [content]=N'{content}'
+                    SELECT * FROM [{table_name}] WHERE [Name]=N'{title}' AND [content]=N'{content}'
                 '''.format(table_name=TARGET_TABLE, title=_title, content=_content)
                 LDEBUG(sql)
                 cursor.execute(sql)
                 if not cursor.fetchone():   # If it NOT returns an object
                     # Insert the record
                     sql = u'''
-                        INSERT INTO {table_name}
+                        INSERT INTO [{table_name}]
                             ([AnnouncementDir_ID], [Name], [content], [Post], [from], [CompanyName], [AdminID])
                         OUTPUT 
                             Inserted.*
@@ -335,14 +335,14 @@ def handle_news(db_settings, key='news'):
                 # Check if already have news with the title
                 # Condition: Have same title and same news
                 sql = u'''
-                    SELECT * FROM {table_name} WHERE [Name]=N'{title}' AND [content]=N'{content}'
+                    SELECT * FROM [{table_name}] WHERE [Name]=N'{title}' AND [content]=N'{content}'
                 '''.format(table_name=TARGET_TABLE, title=_title, content=_content)
                 LDEBUG(sql)
                 cursor.execute(sql)
                 if not cursor.fetchone():   # If it NOT returns an object
                     # Insert the record
                     sql = u'''
-                        INSERT INTO {table_name}
+                        INSERT INTO [{table_name}]
                             ([NewsDir_ID], [Name], [content], [Post], [from], [CompanyName], [AdminID])
                         OUTPUT 
                             Inserted.*
@@ -438,7 +438,7 @@ def handle_company_info(db_settings, key='company_info'):
             # Check if already have company_info with the title
             # Condition: Have same long_name and same short_name
             sql = u'''
-                SELECT TOP(1) * FROM {table_name} 
+                SELECT TOP(1) * FROM [{table_name}] 
                 WHERE 
                     [公司名稱]=N'{long_name}' OR [公司簡稱]=N'{short_name}'
 
@@ -448,7 +448,7 @@ def handle_company_info(db_settings, key='company_info'):
             if not cursor.fetchone():   # If it NOT returns an object
                 # Insert the record
                 sql = u'''
-                    INSERT INTO {table_name}
+                    INSERT INTO [{table_name}]
                         ([股票代號], [公司簡稱], [公司名稱], [普通股], [特別股], [公司成立日期], [公開發行日期],
                         [實收資本額], [營利事業統一編號], [總機], [傳真機號], [地址], [網址], [電子郵件信箱], [主要經營業務], [董事長],
                         [總經理], [發言人], [發言人電話] ,[代理發言人] ,[股票過戶機構] ,[電話] ,[過戶地址] ,[簽證會計師事務所])
@@ -484,7 +484,7 @@ def handle_company_info(db_settings, key='company_info'):
             # Condition: Have same long_name and same short_name
             _query_key = 'CompanyID'
             sql = u'''
-                SELECT TOP(1) {query_key} FROM {table_name} 
+                SELECT TOP(1) {query_key} FROM [{table_name}] 
                 WHERE 
                     [公司名稱]=N'{long_name}' OR [公司簡稱]=N'{short_name}'
             '''.format(query_key=_query_key, table_name=TARGET_TABLE, long_name=_long_name, short_name=_short_name)
@@ -499,14 +499,14 @@ def handle_company_info(db_settings, key='company_info'):
                 # if not: INSERT
                 # is yes: UPDATE
                 sql = u'''
-                    SELECT TOP(1) {query_key} FROM {table_name} WHERE CompanyID={company_id}
+                    SELECT TOP(1) {query_key} FROM [{table_name}] WHERE CompanyID={company_id}
                 '''.format(query_key=_query_key, table_name = TARGET_TABLE_FOR_ADDITIONAL_INFO,
                            company_id=_company_id)
                 cursor.execute(sql)       
 
                 if not cursor.fetchone():
                     sql = u'''
-                        INSERT INTO {table_name}
+                        INSERT INTO [{table_name}]
                             (CompanyID, [歷年股東會], [歷年除權除息], [歷年現金增(減)資])
                         OUTPUT 
                             INSERTED.CompanyID, INSERTED.[歷年股東會], INSERTED.[歷年除權除息], INSERTED.[歷年現金增(減)資]
@@ -522,7 +522,7 @@ def handle_company_info(db_settings, key='company_info'):
                     LWARNING(u"'{}' Company ID already exist in '{}' table. Updating instead".format(_company_id, TARGET_TABLE_FOR_ADDITIONAL_INFO))
                     total_update_company_additional_info += 1
                     sql = u'''
-                        UPDATE {table_name}
+                        UPDATE [{table_name}]
                         SET 
                             [歷年股東會]={meeting_history}, 
                             [歷年除權除息]={dividend}, 
