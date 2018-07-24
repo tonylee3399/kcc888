@@ -376,9 +376,14 @@ def handle_news(db_settings, key='news'):
 def handle_company_info(db_settings, key='company_info'):
     company_info_found = 0
     total_company_info_inserted = 0
+    total_company_additional_info_inserted = 0
     total_duplicate_company_info = 0
+    total_update_company_additional_info = 0
     COMPANY_INFO_PATH = join(root_dir, db_settings[key]['SAVE_PATH'])
+
+    # ========== Company basic information ==========
     TARGET_TABLE = db_settings[key]['TARGET_TABLE']
+    TARGET_TABLE_FOR_ADDITIONAL_INFO = db_settings[key]['TARGET_TABLE_FOR_ADDITIONAL_INFO']
     LDEBUG("Company Info Save Folder: {}".format(COMPANY_INFO_PATH))
     LDEBUG("Target DB Table: {}".format(TARGET_TABLE))
 
@@ -421,7 +426,15 @@ def handle_company_info(db_settings, key='company_info'):
             _stock_addr     = handle_values(company_info[u'股務地址'])               #23 db.過戶地址
             _cmp_accountant = handle_values(company_info[u'簽證會計師'])             #24 db.簽證會計師事務所
 
+            # Used for second insertion/update for additional information needed by robot
+            _meeting_hist   = handle_values(company_info[u'歷年股東會'])
+            _dividend       = handle_values(company_info[u'歷年除權除息'])
+            _cash_dividend  = handle_values(company_info[u'歷年現金增(減)資'])
 
+
+            ################################################################################################
+            ###                              First Insertion Algorithm                                   ###
+            ################################################################################################
             # Check if already have company_info with the title
             # Condition: Have same long_name and same short_name
             sql = u'''
@@ -463,12 +476,83 @@ def handle_company_info(db_settings, key='company_info'):
             if _second:
                 LINFO("Sleep for {} seconds".format(_second))
                 time.sleep(_second)
+
+            ################################################################################################
+            ###                              Second Insertion Algorithm                                   ###
+            ################################################################################################
+            # Check if already have company_info with the title
+            # Condition: Have same long_name and same short_name
+            _query_key = 'CompanyID'
+            sql = u'''
+                SELECT TOP(1) {query_key} FROM {table_name} 
+                WHERE 
+                    [公司名稱]=N'{long_name}' OR [公司簡稱]=N'{short_name}'
+            '''.format(query_key=_query_key, table_name=TARGET_TABLE, long_name=_long_name, short_name=_short_name)
+            LDEBUG(sql)
+            cursor.execute(sql)
+            _company_id = cursor.fetchone()
+            if _company_id:   # If it returns an object
+                # Insert the record
+                _company_id = _company_id[0]
+
+                # Check if primary key is already in it.
+                # if not: INSERT
+                # is yes: UPDATE
+                sql = u'''
+                    SELECT TOP(1) {query_key} FROM {table_name} WHERE CompanyID={company_id}
+                '''.format(query_key=_query_key, table_name = TARGET_TABLE_FOR_ADDITIONAL_INFO,
+                           company_id=_company_id)
+                cursor.execute(sql)       
+
+                if not cursor.fetchone():
+                    sql = u'''
+                        INSERT INTO {table_name}
+                            (CompanyID, [歷年股東會], [歷年除權除息], [歷年現金增(減)資])
+                        OUTPUT 
+                            INSERTED.CompanyID, INSERTED.[歷年股東會], INSERTED.[歷年除權除息], INSERTED.[歷年現金增(減)資]
+                        VALUES
+                            ('{company_id}', N'{meeting_history}', N'{dividend}', N'{cash_dividend}')
+                    '''.format(table_name=TARGET_TABLE_FOR_ADDITIONAL_INFO, 
+                        company_id=_company_id, 
+                        meeting_history=_meeting_hist, dividend=_dividend, cash_dividend=_cash_dividend)
+                    LDEBUG(sql)
+                    execute_and_print(cursor, sql, TARGET_TABLE_FOR_ADDITIONAL_INFO, end_index=None, record_id=True)    # Logger type 'c'
+                    total_company_additional_info_inserted += 1    # Add announce inserted counter
+                else:
+                    LWARNING(u"'{}' Company ID already exist in '{}' table. Updating instead".format(_company_id, TARGET_TABLE_FOR_ADDITIONAL_INFO))
+                    total_update_company_additional_info += 1
+                    sql = u'''
+                        UPDATE {table_name}
+                        SET 
+                            [歷年股東會]={meeting_history}, 
+                            [歷年除權除息]={dividend}, 
+                            [歷年現金增(減)資]={cash_dividend}
+                        OUTPUT 
+                            INSERTED.CompanyID, DELETED.[歷年股東會], INSERTED.[歷年股東會],
+                                                DELETED.[歷年除權除息], INSERTED.[歷年除權除息],
+                                                DELETED.[歷年現金增(減)資], INSERTED.[歷年現金增(減)資]
+                        WHERE
+                            CompanyID={company_id}
+                    '''.format(table_name=TARGET_TABLE_FOR_ADDITIONAL_INFO, 
+                        company_id=_company_id, 
+                        meeting_history=_meeting_hist, dividend=_dividend, cash_dividend=_cash_dividend)
+
+            else:
+                LWARNING(u"Already have this additional info in the '{}' database".format(TARGET_TABLE_FOR_ADDITIONAL_INFO))
+                LDEBUG(u"[股票代號]=N'{stock_no}' AND [公司簡稱]=N'{short_name}".format(stock_no=_stock_no, short_name=_short_name))
+
+            _second = 0
+            if _second:
+                LINFO("Sleep for {} seconds".format(_second))
+                time.sleep(_second)
         else:
             LINFO("\tCompany has no company_info")
 
-    LINFO("Total company_info count: {}".format(company_info_found))
-    LINFO("Total company_info inserted: {}".format(total_company_info_inserted))
-    LINFO("Total duplicate company_info found: {}".format(total_duplicate_company_info))
+    LINFO("Total company_info count           : {}".format(company_info_found))
+    LINFO("Total company_info inserted        : {}".format(total_company_info_inserted))
+    LINFO("Total duplicate company_info found : {}".format(total_duplicate_company_info))
+    LINFO("Total company additional info inserted : {}".format(total_company_additional_info_inserted))
+    LINFO("Total company additional info updated  : {}".format(total_update_company_additional_info))
     LINFO("Commiting connection")
     cnxn.commit()
     LINFO("Finished commit!")
@@ -527,8 +611,8 @@ if __name__=="__main__":
         else:
             logger.critical("DB_INFO is empty")
     except Exception as e:
-        LERROR("'{}' exception was raised!".format(type(e)))
-        LERROR("Message: {}".format(' - '.join(e.args)))
+        LERROR(u"'{}' exception was raised!".format(type(e)))
+        LERROR(u"Message: {}".format(' - '.join(e.args)))
         LWARNING("Script finished with exception(s)!")
 
 
