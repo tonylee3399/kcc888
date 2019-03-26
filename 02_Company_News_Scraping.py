@@ -112,8 +112,8 @@ def write_to_json(path, data):
 
     LINFO("Writing into JSON file...")
     with io.open(path, 'w', encoding='utf8') as fp:
-        json_data = json.dumps(data, fp, ensure_ascii=False, indent=4)
-        fp.write(unicode(json_data))
+        json_data = json.dumps(data, ensure_ascii=False, indent=4)
+        fp.write(json_data)
     LINFO("Finished writing JSON file to: {}\n".format(join(NEWS_RESULT_DIR, JSON_FILENAME).encode('utf8')))
 
 
@@ -124,7 +124,7 @@ try:
     start_time = time.time()
 
     # Iterate through every link
-    for k, link in LINKS.iteritems():
+    for k, link in LINKS.items():
         index = 0
         news_dict = {}    # contains all news about a company
 
@@ -175,11 +175,11 @@ try:
                 # Iterating to every news_title and news_content
                 for t, c in zip(news_title, news_contents):
                     # Filter if news title matched TITLE_YEARS_PATTERN
-                    YEARS_FOUND = re.search(TITLE_YEARS_PATTERN, unicode(t).encode('utf8'))
+                    YEARS_FOUND = re.search(TITLE_YEARS_PATTERN, t.encode('utf8'))
                     if YEARS_FOUND:
                         # Validate if the year is within NEWS_YEAR
                         if YEARS_FOUND.group('year') in NEWS_YEAR:
-                            news_dict[unicode(t)] = unicode(c)
+                            news_dict[t] = c
                             number_of_news_found += 1
                             index += 1
                     else:
@@ -222,8 +222,8 @@ try:
 
                         # Stream to logs
                         if SETTINGS["Log_Content"]:
-                            for k, v in news_dict.iteritems():
-                                LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
+                            for k, v in news_dict.items():
+                                LDEBUG("{}\n\t{}".format(k, v))
 
                         break
                 else: # If no 2017 or 2018 news anymore --> Write to JSON file and terminate the loop. Continue to next company
@@ -232,8 +232,8 @@ try:
                     write_to_json(join(NEWS_RESULT_DIR, JSON_FILENAME), news_dict)
                     # Stream to logs
                     if SETTINGS["Log_Content"]:
-                        for k, v in news_dict.iteritems():
-                            LDEBUG("{}\n\t{}".format(k.encode('utf8'), v.encode('utf8')))
+                        for k, v in news_dict.items():
+                            LDEBUG("{}\n\t{}".format(k, v))
                     break
         else:
             LERROR("Page returns [{}] status code. Please check".format(page.status_code))
