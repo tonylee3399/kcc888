@@ -257,14 +257,14 @@ for k, v in LINKS.items():
 # Write COMPANY_RANK_INDEX into a .json file
 LINFO("Writing into JSON file...")
 with io.open(COMPANY_RANK_INDEX_JSON_FILENAME, 'w', encoding='utf8') as fp:
-    data = json.dumps(COMPANY_RANK_INDEX, fp, ensure_ascii=False, indent=4, sort_keys=True)
+    data = json.dumps(COMPANY_RANK_INDEX, ensure_ascii=False, indent=4, sort_keys=True)
     fp.write(data)
 LINFO("Finished writing JSON file to: {}\n".format(COMPANY_RANK_INDEX_JSON_FILENAME.encode('utf8')))
 
 # Write COMPANY_RANK_INDEX into a .json file
 LINFO("Writing into JSON file...")
 with io.open(COMPANY_STOCK_NO_JSON_FILENAME, 'w', encoding='utf8') as fp:
-    data = json.dumps(COMPANY_STOCK_NO, fp, ensure_ascii=False, indent=4, sort_keys=True)
+    data = json.dumps(COMPANY_STOCK_NO, ensure_ascii=False, indent=4, sort_keys=True)
     fp.write(data)
 LINFO("Finished writing JSON file to: {}\n".format(COMPANY_STOCK_NO_JSON_FILENAME.encode('utf8')))
 
