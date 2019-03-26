@@ -59,69 +59,65 @@ LWARNING = lambda s: logger.warning(s)
 
 
 # ==================== Global Variable Declaration ====================
-try:
-    # 1. Variables
-    raw_lines = []
 
-    # 2. Paths and Files Declaration
-    REQUIRED_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['REQUIRED_FILE'])
-    SAVE_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['SAVE_DIR'])
-    SAVE_FILENAME = SETTINGS['SAVE_FILENAME']
+# 1. Variables
+raw_lines = []
 
-    # 2.1. Check if saving directory exists
-    if not exists(SAVE_DIR):
-        # Create saving directory if does not exist
-        LINFO("'{}' save folder does not exist.".format(SAVE_DIR))
-        os.makedirs(SAVE_DIR)
-        LINFO("'{}' save folder created".format(SAVE_DIR))
+# 2. Paths and Files Declaration
+REQUIRED_FILE = join(SCRIPT_ROOT_FOLDER, SETTINGS['REQUIRED_FILE'])
+SAVE_DIR = join(SCRIPT_ROOT_FOLDER, SETTINGS['SAVE_DIR'])
+SAVE_FILENAME = SETTINGS['SAVE_FILENAME']
 
-    # 2.2. Check if required file exists
-    if exists(REQUIRED_FILE):
-        # If exists: read every line in parse_bifoo.php to raw_lines variable
-        LDEBUG("File '{}' exists".format(REQUIRED_FILE))
-        with open(REQUIRED_FILE, 'r') as f:
-            for line in f.readlines():
-                raw_lines.append(line)
-            LDEBUG("Finished reading all content")
-            LDEBUG("\n".join(raw_lines))
-    else:
-        # If doesn't exist: Need to supply parse_bifoo.php to this 
-        LERROR("'{}' required file does not exists!! Please supply!".format(REQUIRED_FILE))
+# 2.1. Check if saving directory exists
+if not exists(SAVE_DIR):
+    # Create saving directory if does not exist
+    LINFO("'{}' save folder does not exist.".format(SAVE_DIR))
+    os.makedirs(SAVE_DIR)
+    LINFO("'{}' save folder created".format(SAVE_DIR))
+
+# 2.2. Check if required file exists
+if exists(REQUIRED_FILE):
+    # If exists: read every line in parse_bifoo.php to raw_lines variable
+    LDEBUG("File '{}' exists".format(REQUIRED_FILE))
+    with io.open(REQUIRED_FILE, 'r', encoding='utf8') as f:
+        for line in f.readlines():
+            raw_lines.append(line)
+        LDEBUG("Finished reading all content")
+        LDEBUG("\n".join(raw_lines))
+else:
+    # If doesn't exist: Need to supply parse_bifoo.php to this 
+    LERROR("'{}' required file does not exists!! Please supply!".format(REQUIRED_FILE))
 
 
-    # 3.1 Extracting Company Name in the web
-    LINFO("Preprocessing information read from parse_bifoo.php")
-    result_bifeng = [c.strip().split(' ')[1][1:-2] for c in raw_lines if 'case' in c]
-    LINFO("Finished preprocessing information read from parse_bifoo.php")
+# 3.1 Extracting Company Name in the web
+LINFO("Preprocessing information read from parse_bifoo.php")
+result_bifeng = [c.strip().split(' ')[1][1:-2] for c in raw_lines if 'case' in c]
+LINFO("Finished preprocessing information read from parse_bifoo.php")
 
-    # Company name patterns to capture within the string
-    pattern = r"\$array\[\$i\]\['cmpname'\] = \'(?P<cmpname>.*)\';"
+# Company name patterns to capture within the string
+pattern = r"\$array\[\$i\]\['cmpname'\] = \'(?P<cmpname>.*)\';"
 
-    # 3.2 Extracting DB friendly name by finding string matching the patterns
-    LINFO("Find lines matching pattern specified")
-    result_db = re.findall(pattern, "\n".join(raw_lines))
-    LINFO("Finished finding lines matching pattern specified")
+# 3.2 Extracting DB friendly name by finding string matching the patterns
+LINFO("Find lines matching pattern specified")
+result_db = re.findall(pattern, "\n".join(raw_lines))
+LINFO("Finished finding lines matching pattern specified")
 
-    # UTF8 decoded to unicode
-    LINFO("Decoding UTF8 decoded strings into unicode")
-    result_bifeng = [x.decode('utf8') for x in result_bifeng]
-    result_db = [x.decode('utf8') for x in result_db]
-    LINFO("Finished decoding..")
+# UTF8 decoded to unicode
+LINFO("Decoding UTF8 decoded strings into unicode")
+result_bifeng = [x for x in result_bifeng]
+result_db = [x for x in result_db]
+LINFO("Finished decoding..")
 
-    # 3.3 Zip all information into a dictionary to prepare feeding to JSON module
-    LINFO("Creating dictionary containing all information")
-    dictionary = dict(zip(result_bifeng, result_db))
-    for k, v in dictionary.iteritems():
-        LDEBUG(" -> ".join([k.encode('utf8'), v.encode('utf8')]))
+# 3.3 Zip all information into a dictionary to prepare feeding to JSON module
+LINFO("Creating dictionary containing all information")
+dictionary = dict(zip(result_bifeng, result_db))
+for k, v in dictionary.items():
+    LDEBUG(" -> ".join([k, v]))
 
-    # 4. Exporting the dictionary to JSON file
-    with io.open(join(SAVE_DIR, SAVE_FILENAME), 'w', encoding='utf8') as f:
-        data = json.dumps(dictionary, f, ensure_ascii=False, indent=4, sort_keys=True)
-        f.write(unicode(data))
-        LINFO("Sucessfully written all information to {}".format(join(SAVE_DIR, SAVE_FILENAME)))
-        
-    LINFO("Finished running script.\n\n")
-except Exception as e:
-    LERROR("'{}' exception was raised!".format(type(e)))
-    LERROR("Message: {}".format(' - '.join(e.args)))
-    LWARNING("Script finished with exception(s)!")
+# 4. Exporting the dictionary to JSON file
+with io.open(join(SAVE_DIR, SAVE_FILENAME), 'w', encoding='utf8') as f:
+    data = json.dumps(dictionary, ensure_ascii=False, indent=4, sort_keys=True)
+    f.write(data)
+    LINFO("Sucessfully written all information to {}".format(join(SAVE_DIR, SAVE_FILENAME)))
+    
+LINFO("Finished running script.\n\n")
