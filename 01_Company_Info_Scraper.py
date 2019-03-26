@@ -127,7 +127,7 @@ if not exists(COMPANY_INFO_RESULT_DIR):
 @time_the_process
 def parse_company_name(company_name):
     '''Parse company name discrepancy between Berich.com and Database'''
-    assert type(company_name) == unicode, "company_name has to be unicode typed. Type: {}".format(type(company_name))
+    # assert type(company_name) == unicode, "company_name has to be unicode typed. Type: {}".format(type(company_name))
         
     pattern = re.compile(r"(?P<name>.*)\((?P<status>.*)\)")
     
@@ -138,7 +138,7 @@ def parse_company_name(company_name):
         return
     
     if exists(COMPANY_NAMES_JSON):
-        with open(COMPANY_NAME_PARSER_FILE, 'r') as f:
+        with io.open(COMPANY_NAME_PARSER_FILE, 'r', encoding='utf8') as f:
             NAMES = json.load(f)
             LINFO("Searching company names")
             _company_name   = re.search(pattern, company_name).group('name')
@@ -157,121 +157,121 @@ def parse_company_name(company_name):
 
 
 # ==================== Main Process ====================
-try:
-    start_time = time.time()
-    _iteration = 0
+# try:
+start_time = time.time()
+_iteration = 0
 
-    # Iterate through every link
-    for k, v in LINKS.iteritems():
-        LINFO("Starting iteration {} / {}".format(_iteration + 1, len(LINKS)).center(70, "="))
-        LINFO("Getting page: {}".format(v))
-        page = requests.get(v)
-        LINFO("Page returns <{}> code".format(page.status_code))
+# Iterate through every link
+for k, v in LINKS.items():
+    LINFO("Starting iteration {} / {}".format(_iteration + 1, len(LINKS)).center(70, "="))
+    LINFO("Getting page: {}".format(v))
+    page = requests.get(v)
+    LINFO("Page returns <{}> code".format(page.status_code))
 
-        if page.status_code == 200:
-            LINFO("Souping page")
-            soup = BeautifulSoup(page.content, 'html5lib')
+    if page.status_code == 200:
+        LINFO("Souping page")
+        soup = BeautifulSoup(page.content, 'html5lib')
 
-            # Retrieving company name and its status
-            LINFO("Retrieving company name")
-            company_name = soup.find('td', {'class':re.compile(COMPANY_NAME_CLASS)}).get_text()
-            LINFO("Parsing company name to  Bifoo DB friendly name")
-            company_name = parse_company_name(company_name)
-            LDEBUG("Company name: {}".format(company_name.encode('utf8')))
-            LDEBUG("Company URL: {}".format(v))
-            LINFO(" Analyzing ".center(70, "-"))
+        # Retrieving company name and its status
+        LINFO("Retrieving company name")
+        company_name = soup.find('td', {'class':re.compile(COMPANY_NAME_CLASS)}).get_text()
+        LINFO("Parsing company name to  Bifoo DB friendly name")
+        company_name = parse_company_name(company_name)
+        LDEBUG("Company name: {}".format(company_name.encode('utf8')))
+        LDEBUG("Company URL: {}".format(v))
+        LINFO(" Analyzing ".center(70, "-"))
 
-            # Create an indexed filename according to its rank
-            JSON_FILENAME = "{:0>2}".format(k) + "_" + company_name + ".json"
+        # Create an indexed filename according to its rank
+        JSON_FILENAME = "{:0>2}".format(k) + "_" + company_name + ".json"
 
-            # Find table headers and its values
-            td_cmp_tags = soup.find_all("td", {"class": re.compile(TARGET_TITLE_VALUE_CLASS)})
+        # Find table headers and its values
+        td_cmp_tags = soup.find_all("td", {"class": re.compile(TARGET_TITLE_VALUE_CLASS)})
 
-            # Check if is empty
-            LINFO("Length of td_cmp_tags information pair: {}".format(len(td_cmp_tags)))
+        # Check if is empty
+        LINFO("Length of td_cmp_tags information pair: {}".format(len(td_cmp_tags)))
 
-            # Declare list variables to contain title value pairs
-            title = []
-            value = []
+        # Declare list variables to contain title value pairs
+        title = []
+        value = []
 
-            title.append('Company Name')
-            title.append('Company URL')
-            value.append(company_name)
-            value.append(v)
+        title.append('Company Name')
+        title.append('Company URL')
+        value.append(company_name)
+        value.append(v)
 
-            # Insert the company rank
-            COMPANY_RANK_INDEX["{:0>2}".format(k)] = company_name
+        # Insert the company rank
+        COMPANY_RANK_INDEX["{:0>2}".format(k)] = company_name
 
-            # Arrange the data into a dictionary friendly format
-            for i, info in enumerate(td_cmp_tags):
-                if i % 2 == 0:
-                    title.append(info.get_text().strip() if info.get_text().strip() != '' else '-')
-                else:
-                    value.append(info.get_text().strip() if info.get_text().strip() != '' else '-')
+        # Arrange the data into a dictionary friendly format
+        for i, info in enumerate(td_cmp_tags):
+            if i % 2 == 0:
+                title.append(info.get_text().strip() if info.get_text().strip() != '' else '-')
+            else:
+                value.append(info.get_text().strip() if info.get_text().strip() != '' else '-')
 
-            # Check the length of both title and value
-            # Length MUST be the same, or the program will treat it as a corrupted format and quit program
-            LINFO("Length of title variable: {}".format(len(title)))
-            LINFO("Length of value variable: {}".format(len(value)))
-            if len(title) != len(value):
-                LERROR("The title and value cannot be paired. Quitting..")
-                quit()
+        # Check the length of both title and value
+        # Length MUST be the same, or the program will treat it as a corrupted format and quit program
+        LINFO("Length of title variable: {}".format(len(title)))
+        LINFO("Length of value variable: {}".format(len(value)))
+        if len(title) != len(value):
+            LERROR("The title and value cannot be paired. Quitting..")
+            quit()
 
-            # Input both titles and values into a dictionary
-            LINFO("Populating company information dictionary...")
-            i=0
-            DATA = {}
-            for _t, _v in zip(title, value):
-                DATA[unicode(_t)] = unicode(_v)
-                i += 1
-            LINFO("Finished populating company information dictionary!")
-            for k, v in DATA.iteritems():
-                LDEBUG(": ".join([k.encode('utf8'), v.encode('utf8')]))
+        # Input both titles and values into a dictionary
+        LINFO("Populating company information dictionary...")
+        i=0
+        DATA = {}
+        for _t, _v in zip(title, value):
+            DATA[_t] = _v
+            i += 1
+        LINFO("Finished populating company information dictionary!")
+        for k, v in DATA.items():
+            LDEBUG(": ".join([k, v]))
 
-            # Write into a .json file
-            LINFO("Writing into JSON file...")
-            with io.open(join(COMPANY_INFO_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
-                data = json.dumps(DATA, fp, ensure_ascii=False, indent=4, sort_keys=True)
-                fp.write(unicode(data))
-            LINFO("Finished writing JSON file to: {}".format(join(COMPANY_INFO_RESULT_DIR, JSON_FILENAME).encode('utf8')))
+        # Write into a .json file
+        LINFO("Writing into JSON file...")
+        with io.open(join(COMPANY_INFO_RESULT_DIR, JSON_FILENAME), 'w', encoding='utf8') as fp:
+            data = json.dumps(DATA, ensure_ascii=False, indent=4, sort_keys=True)
+            fp.write(data)
+        LINFO("Finished writing JSON file to: {}".format(join(COMPANY_INFO_RESULT_DIR, JSON_FILENAME).encode('utf8')))
 
-            # Define a sleep interval. Recommended to not set to 0 for not spamming the server
-            _second = GLOBAL["DELAY"]
-            if _second:
-                LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
-                time.sleep(_second)
-                LINFO("Waking up.. Starting next iteration..\n")
+        # Define a sleep interval. Recommended to not set to 0 for not spamming the server
+        _second = GLOBAL["DELAY"]
+        if _second:
+            LINFO("Now sleeps for {} seconds for not spamming the website".format(_second))
+            time.sleep(_second)
+            LINFO("Waking up.. Starting next iteration..\n")
 
-            # Insert the company stock number
-            COMPANY_STOCK_NO[DATA["Company Name"]] = DATA[u"股票代號"]
+        # Insert the company stock number
+        COMPANY_STOCK_NO[DATA["Company Name"]] = DATA[u"股票代號"]
 
-            # Increase iteration counter
-            _iteration += 1
-        else:
-            LERROR("Page returns [{}] status code. Please check".format(page.status_code))
-            LERROR("Continue to the next link")
-            _iteration += 1
-            # continue
+        # Increase iteration counter
+        _iteration += 1
+    else:
+        LERROR("Page returns [{}] status code. Please check".format(page.status_code))
+        LERROR("Continue to the next link")
+        _iteration += 1
+        # continue
 
 
-    # Write COMPANY_RANK_INDEX into a .json file
-    LINFO("Writing into JSON file...")
-    with io.open(COMPANY_RANK_INDEX_JSON_FILENAME, 'w', encoding='utf8') as fp:
-        data = json.dumps(COMPANY_RANK_INDEX, fp, ensure_ascii=False, indent=4, sort_keys=True)
-        fp.write(unicode(data))
-    LINFO("Finished writing JSON file to: {}\n".format(COMPANY_RANK_INDEX_JSON_FILENAME.encode('utf8')))
+# Write COMPANY_RANK_INDEX into a .json file
+LINFO("Writing into JSON file...")
+with io.open(COMPANY_RANK_INDEX_JSON_FILENAME, 'w', encoding='utf8') as fp:
+    data = json.dumps(COMPANY_RANK_INDEX, fp, ensure_ascii=False, indent=4, sort_keys=True)
+    fp.write(data)
+LINFO("Finished writing JSON file to: {}\n".format(COMPANY_RANK_INDEX_JSON_FILENAME.encode('utf8')))
 
-    # Write COMPANY_RANK_INDEX into a .json file
-    LINFO("Writing into JSON file...")
-    with io.open(COMPANY_STOCK_NO_JSON_FILENAME, 'w', encoding='utf8') as fp:
-        data = json.dumps(COMPANY_STOCK_NO, fp, ensure_ascii=False, indent=4, sort_keys=True)
-        fp.write(unicode(data))
-    LINFO("Finished writing JSON file to: {}\n".format(COMPANY_STOCK_NO_JSON_FILENAME.encode('utf8')))
+# Write COMPANY_RANK_INDEX into a .json file
+LINFO("Writing into JSON file...")
+with io.open(COMPANY_STOCK_NO_JSON_FILENAME, 'w', encoding='utf8') as fp:
+    data = json.dumps(COMPANY_STOCK_NO, fp, ensure_ascii=False, indent=4, sort_keys=True)
+    fp.write(data)
+LINFO("Finished writing JSON file to: {}\n".format(COMPANY_STOCK_NO_JSON_FILENAME.encode('utf8')))
 
-    LINFO("Finished scraping all data in: {:.3f}s".format(time.time() - start_time))
-except Exception as e:
-    LERROR("'{}' exception was raised!".format(type(e)))
-    LERROR("Message: {}".format(' - '.join(e.args)))
-    LWARNING("Script finished with exception(s)!")
+LINFO("Finished scraping all data in: {:.3f}s".format(time.time() - start_time))
+# except Exception as e:
+#     LERROR("'{}' exception was raised!".format(type(e)))
+#     LERROR("Message: {}".format(' - '.join(e.args)))
+#     LWARNING("Script finished with exception(s)!")
 
     
